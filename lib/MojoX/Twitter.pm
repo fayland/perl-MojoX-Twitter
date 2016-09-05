@@ -66,18 +66,24 @@ sub request {
     my $tx = $self->ua->build_tx($method => $url => { Authorization => "OAuth $auth_str" } => @extra );
     $tx = $self->ua->start($tx);
 
+    if ($res->headers->header('X-Rate-Limit-Remaining') < 1) {
+        my $sleep = $res->headers->header('X-Rate-Limit-Reset') - time();
+        sleep $sleep; # wait until limit reset
+    }
+
     if (my $res = $tx->success) {
         # check Rate Limit
         # print Dumper(\$res); use Data::Dumper;
 
-        if ($res->headers->header('X-Rate-Limit-Remaining') < 1) {
-            my $sleep = $res->headers->header('X-Rate-Limit-Reset') - time();
-            sleep $sleep; # wait until limit reset
-        }
-
         return $res->json;
     } else {
         my $err = $tx->error;
+
+        # for 429 response: Too Many Requests
+        if ( ($err->{code} || 0) == 429 ) {
+            return $self->request($method, $command, $params); # REDO
+        }
+
         croak "$err->{code} response: $err->{message}" if $err->{code};
         croak "Connection error: $err->{message}";
     }

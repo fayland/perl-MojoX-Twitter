@@ -37,7 +37,9 @@
       },
       "runtime" : {
          "requires" : {
-            "perl" : "5.008005"
+            "Digest::SHA" : "0",
+            "Mojolicious" : "0",
+            "URI::Escape" : "0"
          }
       },
       "test" : {
@@ -58,6 +60,6 @@
          "web" : "https://github.com/fayland/perl-MojoX-Twitter"
       }
    },
-   "version" : "0.01"
+   "version" : "0.02"
 }
 

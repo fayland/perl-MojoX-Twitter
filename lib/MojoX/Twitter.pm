@@ -11,7 +11,7 @@ use Digest::SHA 'hmac_sha1';
 use MIME::Base64 'encode_base64';
 use URI::Escape 'uri_escape_utf8';
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 has 'ua' => sub {
     my $ua = Mojo::UserAgent->new;

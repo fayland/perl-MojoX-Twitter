@@ -66,8 +66,8 @@ sub request {
     my $tx = $self->ua->build_tx($method => $url => { Authorization => "OAuth $auth_str" } => @extra );
     $tx = $self->ua->start($tx);
 
-    if ($res->headers->header('X-Rate-Limit-Remaining') < 1) {
-        my $sleep = $res->headers->header('X-Rate-Limit-Reset') - time();
+    if ($tx->res->headers->header('X-Rate-Limit-Remaining') < 1) {
+        my $sleep = $tx->res->headers->header('X-Rate-Limit-Reset') - time();
         sleep $sleep; # wait until limit reset
     }
 

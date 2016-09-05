@@ -46,7 +46,7 @@ sub request {
 
     ## sign
     my %params = ( %{$params || {}}, %oauth_params );
-    my $params_str = join('&', map { $_ . '=' . $params{$_} } sort keys %params);
+    my $params_str = join('&', map { $_ . '=' . uri_escape_utf8($params{$_}) } sort keys %params);
     my $base_str = uc($method) . '&' . uri_escape_utf8($url) . '&' . uri_escape_utf8($params_str);
     my $signing_key = uri_escape_utf8($consumer_secret) . '&' . uri_escape_utf8($access_token_secret);
     my $sign = encode_base64(hmac_sha1($base_str, $signing_key), '');

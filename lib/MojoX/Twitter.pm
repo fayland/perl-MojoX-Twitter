@@ -7,6 +7,7 @@ use Carp qw/croak/;
 use Mojo::Base -base;
 use Mojo::UserAgent;
 use Mojo::URL;
+use Mojo::JSON 'j';
 use Digest::SHA 'hmac_sha1';
 use MIME::Base64 'encode_base64';
 use URI::Escape 'uri_escape_utf8';
@@ -79,14 +80,29 @@ sub streaming {
         $url = $uri->to_string();
     }
 
+    # The Streaming API will send a keep-alive newline every 30 seconds
+    # to prevent your application from timing out the connection.
+    $self->ua->inactivity_timeout(61);
+
     my $tx = $self->ua->build_tx(GET => $url => {
         Authorization => "OAuth $auth_str"
     });
     $tx->res->max_message_size(0);
 
     # Replace "read" events to disable default content parser
+    my $input;
     $tx->res->content->unsubscribe('read')->on(read => sub {
-        $callback->(@_);
+        my ($content, $bytes) = @_;
+
+        # https://dev.twitter.com/streaming/overview/processing
+        # The body of a streaming API response consists of a series of newline-delimited messages, where “newline” is considered to be \r\n (in hex, 0x0D 0x0A) and “message” is a JSON encoded data structure or a blank line.
+        $input .= $bytes;
+        while ($input =~ s/^(.*?)\r\n//) {
+            my ($json_raw) = $1;
+            if (length($json_raw)) {
+                $callback->(j($json_raw));
+            }
+        }
     });
 
     # Process transaction
@@ -154,9 +170,8 @@ MojoX::Twitter - Simple Twitter Client
         pass => 'z'
     );
     $twitter->streaming('https://userstream.twitter.com/1.1/user.json', { with => 'followings' }, sub {
-        # do the streaming
-        my ($content, $bytes) = @_;
-        say "Got $bytes";
+        my ($tweet) = @_;
+        say Dumper(\$tweet);
     });
 
 =head1 DESCRIPTION

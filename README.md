@@ -15,6 +15,12 @@ MojoX::Twitter - Simple Twitter Client
 
       my $users = $twitter->request('GET', 'users/show', { screen_name => 'support' });
 
+      ## streaming
+      $twitter->streaming('https://userstream.twitter.com/1.1/user.json', { with => 'followings' }, sub {
+          my ($tweet) = @_;
+          say Dumper(\$tweet);
+      });
+
 # DESCRIPTION
 
 MojoX::Twitter is a simple Twitter client:

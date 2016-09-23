@@ -31,32 +31,10 @@ has 'pass';
 sub request {
     my ($self, $method, $command, $params) = @_;
 
-    my ($consumer_key, $consumer_secret, $access_token, $access_token_secret) =
-        ($self->consumer_key, $self->consumer_secret, $self->access_token, $self->access_token_secret);
-
-    croak 'consumer_key, consumer_secret, access_token and access_token_secret are all required'
-        unless $consumer_key and $consumer_secret and $access_token and $access_token_secret;
-
     $command = '/' . $command if $command !~ m{^/};
     my $url = "https://api.twitter.com/1.1" . $command . ".json";
-    my %oauth_params = (
-        oauth_consumer_key => $consumer_key,
-        oauth_nonce => __nonce(),
-        oauth_signature_method => 'HMAC-SHA1',
-        oauth_timestamp => time(),
-        oauth_token   => $access_token,
-        oauth_version => '1.0',
-    );
 
-    ## sign
-    my %params = ( %{$params || {}}, %oauth_params );
-    my $params_str = join('&', map { $_ . '=' . uri_escape_utf8($params{$_}) } sort keys %params);
-    my $base_str = uc($method) . '&' . uri_escape_utf8($url) . '&' . uri_escape_utf8($params_str);
-    my $signing_key = uri_escape_utf8($consumer_secret) . '&' . uri_escape_utf8($access_token_secret);
-    my $sign = encode_base64(hmac_sha1($base_str, $signing_key), '');
-
-    $oauth_params{oauth_signature} = $sign;
-    my $auth_str = join ', ', map { $_ . '="' . uri_escape_utf8($oauth_params{$_}) . '"' } sort keys %oauth_params;
+    my $auth_str = $self->__build_auth_header($method, $url, $params);
 
     my @extra;
     if ($method eq 'GET') {
@@ -95,15 +73,18 @@ sub request {
 }
 
 sub streaming {
-    my ($self, $url, $callback) = @_;
+    my ($self, $url, $params, $callback) = @_;
 
-    croak 'user, and pass are required'
-        unless $self->user and $self->pass;
+    my $auth_str = $self->__build_auth_header('GET', $url, $params);
 
-    my $auth = encode_base64( join(':', $self->user, $self->pass), '' );
+    if ($params) {
+        my $uri = Mojo::URL->new($url);
+        $uri->query($params);
+        $url = $uri->to_string();
+    }
 
     my $tx = $self->ua->build_tx(GET => $url => {
-        Authorization => "Basic $auth"
+        Authorization => "OAuth $auth_str"
     });
     $tx->res->max_message_size(0);
 
@@ -114,6 +95,35 @@ sub streaming {
 
     # Process transaction
     $self->ua->start($tx);
+}
+
+sub __build_auth_header {
+    my ($self, $method, $url, $params) = @_;
+
+    my ($consumer_key, $consumer_secret, $access_token, $access_token_secret) =
+        ($self->consumer_key, $self->consumer_secret, $self->access_token, $self->access_token_secret);
+
+    croak 'consumer_key, consumer_secret, access_token and access_token_secret are all required'
+        unless $consumer_key and $consumer_secret and $access_token and $access_token_secret;
+
+    my %oauth_params = (
+        oauth_consumer_key => $consumer_key,
+        oauth_nonce => __nonce(),
+        oauth_signature_method => 'HMAC-SHA1',
+        oauth_timestamp => time(),
+        oauth_token   => $access_token,
+        oauth_version => '1.0',
+    );
+
+    ## sign
+    my %params = ( %{$params || {}}, %oauth_params );
+    my $params_str = join('&', map { $_ . '=' . uri_escape_utf8($params{$_}) } sort keys %params);
+    my $base_str = uc($method) . '&' . uri_escape_utf8($url) . '&' . uri_escape_utf8($params_str);
+    my $signing_key = uri_escape_utf8($consumer_secret) . '&' . uri_escape_utf8($access_token_secret);
+    my $sign = encode_base64(hmac_sha1($base_str, $signing_key), '');
+
+    $oauth_params{oauth_signature} = $sign;
+    return join ', ', map { $_ . '="' . uri_escape_utf8($oauth_params{$_}) . '"' } sort keys %oauth_params;
 }
 
 sub __nonce {
@@ -147,7 +157,7 @@ MojoX::Twitter - Simple Twitter Client
         user => 'x',
         pass => 'z'
     );
-    $twitter->streaming('https://userstream.twitter.com/1.1/user.json', sub {
+    $twitter->streaming('https://userstream.twitter.com/1.1/user.json', { with => 'followings' }, sub {
         # do the streaming
         my ($content, $bytes) = @_;
         say "Got $bytes";

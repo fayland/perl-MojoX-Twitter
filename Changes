@@ -1,6 +1,7 @@
 Revision history for MojoX-Twitter
 
 {{$NEXT}}
+        - support streaming
 
 0.05  2016-09-05 13:25:52 CST
         - in case there is no X-Rate-Limit-Remaining in header

@@ -165,10 +165,6 @@ MojoX::Twitter - Simple Twitter Client
     my $users = $twitter->request('GET', 'users/show', { screen_name => 'support' });
 
     ## streaming
-    my $twitter = MojoX::Twitter->new(
-        user => 'x',
-        pass => 'z'
-    );
     $twitter->streaming('https://userstream.twitter.com/1.1/user.json', { with => 'followings' }, sub {
         my ($tweet) = @_;
         say Dumper(\$tweet);

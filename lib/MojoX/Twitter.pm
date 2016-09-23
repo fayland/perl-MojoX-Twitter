@@ -100,9 +100,9 @@ sub streaming {
     croak 'user, and pass are required'
         unless $self->user and $self->pass;
 
-    my $auth = encode_base64( join(':', $self->user, $self->pass) );
+    my $auth = encode_base64( join(':', $self->user, $self->pass), '' );
 
-    my $tx = $ua->build_tx(GET => $url => {
+    my $tx = $self->ua->build_tx(GET => $url => {
         Authorization => "Basic $auth"
     });
     $tx->res->max_message_size(0);
@@ -113,7 +113,7 @@ sub streaming {
     });
 
     # Process transaction
-    $ua->start($tx);
+    $self->ua->start($tx);
 }
 
 sub __nonce {

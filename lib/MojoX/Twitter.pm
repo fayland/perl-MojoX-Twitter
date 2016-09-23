@@ -24,10 +24,6 @@ has 'consumer_secret';
 has 'access_token';
 has 'access_token_secret';
 
-# for streaming
-has 'user';
-has 'pass';
-
 sub request {
     my ($self, $method, $command, $params) = @_;
 

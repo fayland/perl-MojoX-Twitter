@@ -8,8 +8,10 @@ use lib "$Bin/../lib";
 use MojoX::Twitter;
 
 my $twitter = MojoX::Twitter->new(
-    user => $ENV{MOJOX_TWITTER_USER} || 'x',
-    pass => $ENV{MOJOX_TWITTER_PASS} || 'z'
+    consumer_key    => 'z',
+    consumer_secret => 'x',
+    access_token        => '1-z',
+    access_token_secret => 'x',
 );
 $twitter->streaming('https://userstream.twitter.com/1.1/user.json', { with => 'followings' }, sub {
     # do the streaming

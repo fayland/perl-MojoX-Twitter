@@ -24,6 +24,10 @@ has 'consumer_secret';
 has 'access_token';
 has 'access_token_secret';
 
+# for streaming
+has 'user';
+has 'pass';
+
 sub request {
     my ($self, $method, $command, $params) = @_;
 
@@ -90,6 +94,28 @@ sub request {
     }
 }
 
+sub streaming {
+    my ($self, $url, $callback) = @_;
+
+    croak 'user, and pass are required'
+        unless $self->user and $self->pass;
+
+    my $auth = encode_base64( join(':', $self->user, $self->pass) );
+
+    my $tx = $ua->build_tx(GET => $url => {
+        Authorization => "Basic $auth"
+    });
+    $tx->res->max_message_size(0);
+
+    # Replace "read" events to disable default content parser
+    $tx->res->content->unsubscribe('read')->on(read => sub {
+        $callback->(@_);
+    });
+
+    # Process transaction
+    $ua->start($tx);
+}
+
 sub __nonce {
     return time ^ $$ ^ int(rand 2**32);
 }
@@ -115,6 +141,17 @@ MojoX::Twitter - Simple Twitter Client
     );
 
     my $users = $twitter->request('GET', 'users/show', { screen_name => 'support' });
+
+    ## streaming
+    my $twitter = MojoX::Twitter->new(
+        user => 'x',
+        pass => 'z'
+    );
+    $twitter->streaming('https://userstream.twitter.com/1.1/user.json', sub {
+        # do the streaming
+        my ($content, $bytes) = @_;
+        say "Got $bytes";
+    });
 
 =head1 DESCRIPTION
 

@@ -51,14 +51,9 @@ sub request {
         sleep $sleep; # wait until limit reset
     }
 
-    if (my $res = $tx->success) {
-        # check Rate Limit
-        # print Dumper(\$res); use Data::Dumper;
-
-        return $res->json;
-    } else {
-        my $err = $tx->error;
-
+    my $err = $tx->error;
+    my $res = $tx->res;
+    if ($err || $res->is_error) {
         # for 429 response: Too Many Requests
         if ( ($err->{code} || 0) == 429 ) {
             return $self->request($method, $command, $params); # REDO
@@ -67,6 +62,8 @@ sub request {
         croak "$err->{code} response: $err->{message}" if $err->{code};
         croak "Connection error: $err->{message}";
     }
+
+    return $res->json;
 }
 
 sub streaming {
